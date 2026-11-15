@@ -350,7 +350,7 @@ def test_closing_registration_creates_feedback_form_and_generates_permanent_cert
     downloaded_pdf.close()
 
     verified = client.get(
-        f"/certificates/verify?number={certificate.certificate_number}"
+        f"/certificates/verify?token={certificate.public_token}"
     )
     assert b"AUTHENTIC CERTIFICATE" in verified.data
     assert b"Alex Attendee" in verified.data
@@ -365,10 +365,10 @@ def test_closing_registration_creates_feedback_form_and_generates_permanent_cert
     assert not pdf_path.exists()
     assert certificate.pdf_deleted_at is not None
     assert client.get(
-        f"/certificates/verify?number={certificate.certificate_number}"
+        f"/certificates/verify?token={certificate.public_token}"
     ).status_code == 200
     assert b"Alex Attendee" in client.get(
-        f"/certificates/verify?number={certificate.certificate_number}"
+        f"/certificates/verify?token={certificate.public_token}"
     ).data
     assert client.get(
         f"/certificates/public/{certificate.public_token}/pdf"
