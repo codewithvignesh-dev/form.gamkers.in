@@ -5,7 +5,9 @@ from pathlib import Path
 
 import click
 from dotenv import load_dotenv
-from flask import Flask, g, render_template
+from flask import Flask, g, redirect, render_template, request, session, url_for
+from flask_login import logout_user
+from flask_wtf.csrf import CSRFError
 from sqlalchemy.engine import URL
 
 load_dotenv()
@@ -235,6 +237,18 @@ def create_app(test_config=None):
             "current_year": datetime.now(timezone.utc).year,
             "csp_nonce": getattr(g, "csp_nonce", ""),
         }
+
+    @app.errorhandler(CSRFError)
+    def csrf_failed(error):
+        # An expired/missing CSRF token must never stop someone from signing out.
+        if request.endpoint in {"auth.logout", "team_profiles.logout"}:
+            logout_user()
+            session.clear()
+            response = redirect(url_for("main.home"))
+            response.delete_cookie(app.config.get("SESSION_COOKIE_NAME", "session"))
+            response.delete_cookie(app.config.get("REMEMBER_COOKIE_NAME", "remember_token"))
+            return response
+        return error.get_response()
 
     @app.errorhandler(413)
     def request_too_large(_error):

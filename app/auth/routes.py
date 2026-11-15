@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy import func
 
@@ -35,10 +35,14 @@ def login():
 
 
 @auth.post("/logout")
-@login_required
 def logout():
+    # Idempotent: always clears the session and cookies, even if already signed out.
     logout_user()
-    return redirect(url_for("main.home"))
+    session.clear()
+    response = redirect(url_for("main.home"))
+    response.delete_cookie(current_app.config.get("SESSION_COOKIE_NAME", "session"))
+    response.delete_cookie(current_app.config.get("REMEMBER_COOKIE_NAME", "remember_token"))
+    return response
 
 
 @auth.route("/forgot-password", methods=["GET", "POST"])

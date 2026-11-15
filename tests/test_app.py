@@ -358,3 +358,15 @@ def test_unknown_app_env_is_rejected(monkeypatch, value):
     monkeypatch.setenv("APP_ENV", value)
     with pytest.raises(RuntimeError, match="APP_ENV"):
         get_config()
+
+
+def test_logout_survives_expired_csrf_token_and_signed_out_state(app):
+    app.config["WTF_CSRF_ENABLED"] = True
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session["leftover"] = "x"
+    response = client.post("/logout")  # no/expired CSRF token
+    assert response.status_code == 302
+    with client.session_transaction() as session:
+        assert "leftover" not in session
+    assert client.get("/logout").status_code == 405
