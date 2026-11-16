@@ -79,7 +79,7 @@ Use these values for `SECRET_KEY`, `SMTP_ENCRYPTION_KEY`, and
 
 | Variable | Description |
 | --- | --- |
-| `SECRET_KEY` | Flask session and security key |
+| `SECRET_KEY` | Flask session and security key; use at least 32 random bytes (production logs a warning if it is shorter) |
 | `DB_HOST`, `DB_PORT` | MySQL/MariaDB server connection |
 | `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Application database credentials |
 | `APPLICATION_BASE_URL` | Public base URL used for generated links |

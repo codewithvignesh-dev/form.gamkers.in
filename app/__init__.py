@@ -17,6 +17,12 @@ from app.extensions import csrf, db, limiter, login_manager, migrate
 
 
 def _warn_about_weak_production_settings(app):
+    secret_key = app.config.get("SECRET_KEY") or ""
+    if len(secret_key.encode("utf-8")) < 32:
+        app.logger.warning(
+            "SECRET_KEY should be at least 32 random bytes. Generate one with: "
+            "python -c \"import secrets; print(secrets.token_urlsafe(48))\""
+        )
     base_url = app.config.get("APPLICATION_BASE_URL")
     if base_url and not base_url.lower().startswith("https://"):
         app.logger.warning("APPLICATION_BASE_URL should start with https:// in production.")

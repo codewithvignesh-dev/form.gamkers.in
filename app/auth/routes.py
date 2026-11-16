@@ -45,8 +45,16 @@ def logout():
     return response
 
 
+def _password_reset_email_key():
+    # Hashed so the limiter storage never holds raw addresses. The limit applies
+    # whether or not the account exists, so a 429 reveals nothing about accounts.
+    email = request.form.get("email", "").strip().lower()
+    return "forgot-password:" + hash_token(email)
+
+
 @auth.route("/forgot-password", methods=["GET", "POST"])
 @limiter.limit("5 per hour")
+@limiter.limit("3 per hour", key_func=_password_reset_email_key, methods=["POST"])
 def forgot_password():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()

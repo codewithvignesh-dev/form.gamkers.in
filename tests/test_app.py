@@ -411,3 +411,60 @@ def test_logout_survives_expired_csrf_token_and_signed_out_state(app):
     with client.session_transaction() as session:
         assert "leftover" not in session
     assert client.get("/logout").status_code == 405
+
+
+def test_forgot_password_is_limited_per_email_address(tmp_path):
+    # The shared `app` fixture disables the limiter (Flask-Limiter then never sets up
+    # its storage), so build an app with rate limiting on and restore the limiter after.
+    from app import create_app
+    from app.extensions import limiter
+
+    limited_app = create_app(
+        {
+            "TESTING": True,
+            "SECRET_KEY": "test-key-not-for-production",
+            "SQLALCHEMY_DATABASE_URI": "sqlite://",
+            "CERTIFICATE_STORAGE_PATH": str(tmp_path / "certificates"),
+            "CERTIFICATE_UPLOAD_PATH": str(tmp_path / "certificate-uploads"),
+            "FORM_BANNER_STORAGE_PATH": str(tmp_path / "form-banners"),
+            "TEAM_PHOTO_STORAGE_PATH": str(tmp_path / "team-photos"),
+            "SESSION_COOKIE_SECURE": False,
+            "REMEMBER_COOKIE_SECURE": False,
+            "WTF_CSRF_ENABLED": False,
+            "RATELIMIT_ENABLED": True,
+            "RATELIMIT_STORAGE_URI": "memory://",
+        }
+    )
+    try:
+        with limited_app.app_context():
+            db.create_all()
+            client = limited_app.test_client()
+            for _ in range(3):
+                response = client.post("/forgot-password", data={"email": "target@example.com"})
+                assert response.status_code == 302
+            # A different address is unaffected by the first address's limit.
+            response = client.post("/forgot-password", data={"email": "other@example.com"})
+            assert response.status_code == 302
+            # The fourth request for the same address is refused, whatever the case or spacing.
+            response = client.post("/forgot-password", data={"email": " Target@Example.com "})
+            assert response.status_code == 429
+            db.session.remove()
+            db.drop_all()
+    finally:
+        limiter.reset()
+        limiter.enabled = False
+
+
+def test_short_secret_key_logs_a_production_warning(app, caplog):
+    from app import _warn_about_weak_production_settings
+
+    app.config["SECRET_KEY"] = "too-short"
+    with caplog.at_level("WARNING"):
+        _warn_about_weak_production_settings(app)
+    assert "SECRET_KEY should be at least 32 random bytes" in caplog.text
+
+    caplog.clear()
+    app.config["SECRET_KEY"] = "k" * 32
+    with caplog.at_level("WARNING"):
+        _warn_about_weak_production_settings(app)
+    assert "SECRET_KEY" not in caplog.text
