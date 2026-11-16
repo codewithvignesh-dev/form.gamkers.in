@@ -427,11 +427,14 @@ def test_admin_entry_point_requires_sign_in_and_opens_workspace(client):
     response = client.get("/admin")
     assert response.status_code == 302
     location = urlparse(response.headers["Location"])
-    assert location.path == "/admin/login"
+    assert location.path == "/login"
     assert parse_qs(location.query) == {"next": ["/dashboard"]}
 
-    login_page = client.get("/admin/login")
+    login_page = client.get("/login")
     assert login_page.status_code == 200 and b'type="password"' in login_page.data
+    # /login is the only sign-in page; the old /admin/login URL no longer exists.
+    assert client.get("/admin/login").status_code == 404
+    assert client.post("/admin/login", data={}).status_code == 404
 
     _register(client)  # creates the admin and signs in
     response = client.get("/admin")

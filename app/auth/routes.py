@@ -15,7 +15,6 @@ auth = Blueprint("auth", __name__)
 
 
 @auth.route("/login", methods=["GET", "POST"])
-@auth.route("/admin/login", methods=["GET", "POST"])  # registered first: url_for() builds this one
 @limiter.limit("10 per minute")
 def login():
     if current_user.is_authenticated:
