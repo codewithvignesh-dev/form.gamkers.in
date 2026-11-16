@@ -317,6 +317,47 @@ def test_hsts_present_on_csrf_failure(app):
     assert response.headers["Strict-Transport-Security"] == "max-age=31536000; includeSubDomains"
 
 
+DENIED_BROWSER_FEATURES = {
+    "camera",
+    "microphone",
+    "geolocation",
+    "payment",
+    "usb",
+    "accelerometer",
+    "gyroscope",
+}
+
+
+def _permissions_policy(response):
+    header = response.headers["Permissions-Policy"]
+    return dict(directive.strip().split("=", 1) for directive in header.split(","))
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/", "/login", "/dashboard", "/does-not-exist", "/static/css/app.css"],
+)
+def test_permissions_policy_denies_unused_device_apis_on_every_response(client, path):
+    response = client.get(path)
+    policy = _permissions_policy(response)
+    assert set(policy) == DENIED_BROWSER_FEATURES
+    assert set(policy.values()) == {"()"}
+
+
+def test_permissions_policy_does_not_block_features_the_app_uses(client):
+    # app.js, team.js and community.js rely on the Clipboard and Web Share APIs.
+    policy = _permissions_policy(client.get("/"))
+    assert "clipboard-write" not in policy
+    assert "web-share" not in policy
+
+
+def test_permissions_policy_present_on_csrf_failure(app):
+    app.config["WTF_CSRF_ENABLED"] = True
+    response = app.test_client().post("/login", data={})
+    assert response.status_code == 400
+    assert set(_permissions_policy(response)) == DENIED_BROWSER_FEATURES
+
+
 @pytest.mark.parametrize(
     ("value", "expected_env", "expected_secure"),
     [

@@ -221,6 +221,12 @@ def create_app(test_config=None):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        # Deny browser device APIs the portal never uses, so injected script cannot reach them.
+        response.headers.setdefault(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), payment=(), usb=(), "
+            "accelerometer=(), gyroscope=()",
+        )
         response.headers.setdefault(
             "Content-Security-Policy",
             f"default-src 'self'; style-src {style_src}; script-src 'self'; "

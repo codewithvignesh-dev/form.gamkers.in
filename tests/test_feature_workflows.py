@@ -127,14 +127,52 @@ def test_wsgi_entrypoints_start_the_flask_application(monkeypatch):
         created_apps.append(app)
         return app
 
+    # wsgi.py only starts the development server when APP_ENV=development.
+    monkeypatch.setenv("APP_ENV", "development")
     monkeypatch.setattr(app_package, "create_app", create_test_app)
-    monkeypatch.setattr(Flask, "run", lambda application: started_apps.append(application))
+    monkeypatch.setattr(
+        Flask,
+        "run",
+        lambda application, **options: started_apps.append((application, options)),
+    )
 
     runpy.run_path("wsgi.py", run_name="__main__")
     runpy.run_path("passenger_wsgi.py", run_name="__main__")
 
     assert len(created_apps) == 2
-    assert started_apps == created_apps
+    assert [started for started, _options in started_apps] == created_apps
+    assert started_apps[0][1] == {"host": "127.0.0.1", "port": 18080, "debug": True}
+    assert started_apps[1][1] == {}
+
+
+def test_wsgi_refuses_to_start_the_development_server_in_production(monkeypatch):
+    import runpy
+
+    import app as app_package
+    from flask import Flask
+
+    original_create_app = app_package.create_app
+    started_apps = []
+
+    def create_test_app():
+        return original_create_app(
+            {
+                "TESTING": True,
+                "SECRET_KEY": "wsgi-smoke-test",
+                "SQLALCHEMY_DATABASE_URI": "sqlite://",
+            }
+        )
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setattr(app_package, "create_app", create_test_app)
+    monkeypatch.setattr(
+        Flask, "run", lambda application, **options: started_apps.append(application)
+    )
+
+    with pytest.raises(RuntimeError, match="production WSGI server"):
+        runpy.run_path("wsgi.py", run_name="__main__")
+
+    assert started_apps == []
 
 
 def test_published_forms_save_changes_without_republishing_or_unpublishing(client):
@@ -341,6 +379,8 @@ def test_closing_registration_creates_feedback_form_and_generates_permanent_cert
     assert public_pdf.data.startswith(b"%PDF")
     assert public_pdf.headers["X-Frame-Options"] == "SAMEORIGIN"
     assert "frame-ancestors 'self'" in public_pdf.headers["Content-Security-Policy"]
+    # The route overrides framing headers but must still carry the global policy.
+    assert "camera=()" in public_pdf.headers["Permissions-Policy"]
     downloaded_pdf = client.get(
         f"/certificates/public/{certificate.public_token}/download"
     )
