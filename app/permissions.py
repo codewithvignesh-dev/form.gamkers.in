@@ -22,6 +22,12 @@ ROLE_PERMISSIONS = (
     ("permissions.manage", "Change role permissions"),
 )
 
+# Custom roles are created by the admin and keyed "custom-<hex>"; admin, developer
+# and contributor are built in and cannot be renamed or deleted.
+CUSTOM_ROLE_PREFIX = "custom-"
+MAX_CUSTOM_ROLES = 20
+ROLE_LABEL_LIMIT = 40
+
 PROTECTED_PERMISSIONS = {"team.manage", "permissions.manage"}
 PERMISSION_NAMES = {permission for permission, _label in ROLE_PERMISSIONS}
 

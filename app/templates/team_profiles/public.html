@@ -41,7 +41,7 @@
 
     <div class="tm-profile-actions">
       <button class="tm-btn tm-btn-inline" type="button" data-copy="{{ public_url }}" data-share-title="{{ profile.name }} · GAMKERS Team">{{ ic('share', 'ic-sm') }} <span data-copy-label>Share profile</span></button>
-      {% if is_owner %}<a class="tm-btn-ghost" href="{{ url_for('team_profiles.portal') }}">{{ ic('user', 'ic-sm') }} Edit my profile</a>{% endif %}
+      {% if is_owner %}<a class="tm-btn-ghost" href="{{ url_for('team_profiles.my_profile') }}">{{ ic('user', 'ic-sm') }} Edit my profile</a>{% endif %}
     </div>
   </div>
 

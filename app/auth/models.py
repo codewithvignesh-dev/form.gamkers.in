@@ -35,8 +35,6 @@ class User(UserMixin, db.Model):
         return self.role == "admin" and self.admin_slot == 1
 
     def has_permission(self, permission):
-        if self.role not in DEFAULT_ROLE_PERMISSIONS:
-            return False
         if permission not in PERMISSION_NAMES:
             return False
         if self.role == "admin" and not self.is_org_admin:
@@ -53,11 +51,28 @@ class User(UserMixin, db.Model):
                 RolePermission.permission == permission,
             )
         )
+        # Custom roles have no built-in defaults: only their saved permissions apply,
+        # so an unknown or deleted role grants nothing.
         return (
             override
             if override is not None
-            else permission in DEFAULT_ROLE_PERMISSIONS[self.role]
+            else permission in DEFAULT_ROLE_PERMISSIONS.get(self.role, ())
         )
+
+
+class Role(db.Model):
+    """An admin-created role. The built-in roles live in app.permissions."""
+
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    key = db.Column(db.String(24), nullable=False)
+    label = db.Column(db.String(40), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    __table_args__ = (
+        db.UniqueConstraint("organization_id", "key", name="uq_role_organization_key"),
+    )
 
 
 class RolePermission(db.Model):
@@ -92,6 +107,8 @@ class Invitation(db.Model):
     )
     email = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(24), nullable=False, default="contributor")
+    # The team profile (and GMK team ID) created together with this invitation.
+    profile_id = db.Column(db.Integer, db.ForeignKey("team_profile.id", ondelete="SET NULL"))
     token_hash = db.Column(db.String(64), nullable=False, unique=True)
     expires_at = db.Column(db.DateTime, nullable=False)
     accepted_at = db.Column(db.DateTime)

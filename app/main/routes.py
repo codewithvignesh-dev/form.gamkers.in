@@ -15,13 +15,13 @@ from app.forms.public_events import feedback_summary, registration_count
 main = Blueprint("main", __name__)
 
 
-@main.get("/admin")
-@main.get("/admin/")
-def admin():
-    """Admin entry point: the forms workspace, or the sign-in page first."""
-    if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
-    return redirect(url_for("auth.login", next=url_for("main.dashboard")))
+# @main.get("/admin")
+# @main.get("/admin/")
+# def admin():
+#     """Admin entry point: the forms workspace, or the sign-in page first."""
+#     if current_user.is_authenticated:
+#         return redirect(url_for("main.dashboard"))
+#     return redirect(url_for("auth.login", next=url_for("main.dashboard")))
 
 
 @main.get("/")

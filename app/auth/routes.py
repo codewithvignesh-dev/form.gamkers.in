@@ -7,7 +7,10 @@ from sqlalchemy import func
 from app.extensions import db, limiter
 from app.mail import send_email
 from app.auth.models import Invitation, PasswordReset, User
+from app.organization.roles import role_labels
 from app.security import hash_token, new_token, valid_email
+from app.team_profiles.models import TeamProfile
+from app.team_profiles.services import link_profile
 from app.urls import absolute_app_url
 from app.utils import utcnow
 
@@ -110,7 +113,13 @@ def accept_invitation(token):
     invitation = db.session.scalar(
         db.select(Invitation).where(Invitation.token_hash == hash_token(token))
     )
-    if not invitation or invitation.accepted_at or invitation.expires_at <= utcnow():
+    labels = role_labels(invitation.organization_id) if invitation else {}
+    if (
+        not invitation
+        or invitation.accepted_at
+        or invitation.expires_at <= utcnow()
+        or invitation.role not in labels
+    ):
         flash("This invitation is invalid or has expired.", "error")
         return redirect(url_for("auth.login"))
     if request.method == "POST":
@@ -130,7 +139,18 @@ def accept_invitation(token):
             user.set_password(password)
             invitation.accepted_at = utcnow()
             db.session.add(user)
-            db.session.commit()
+            db.session.flush()
+            profile = (
+                db.session.get(TeamProfile, invitation.profile_id) if invitation.profile_id else None
+            )
+            if profile is not None and profile.user_id is None:
+                link_profile(profile, user)  # also commits the new account
+            else:
+                db.session.commit()
             login_user(user)
             return redirect(url_for("main.dashboard"))
-    return render_template("auth/accept_invitation.html", invitation=invitation)
+    return render_template(
+        "auth/accept_invitation.html",
+        invitation=invitation,
+        role_label=labels[invitation.role],
+    )

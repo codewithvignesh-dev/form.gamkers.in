@@ -1,89 +1,203 @@
 {% extends "base.html" %}
 {% block title %}Team & access · GAMKERS PORTAL{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/team-admin.css') }}">{% endblock %}
+{% macro role_options(selected='') %}
+  {% for key, label in assignable.items() %}
+    <option value="{{ key }}" {% if key == selected %}selected{% endif %}>{{ label }}</option>
+  {% endfor %}
+{% endmacro %}
+{% macro avatar(profile, fallback) %}
+  <div class="tp-avatar">{% if profile and profile.photo_path %}<img src="{{ photo_url(profile) }}" alt="" width="56" height="56">{% else %}{{ fallback[:1]|upper }}{% endif %}</div>
+{% endmacro %}
+{% macro profile_edit(profile) %}
+  <details class="tp-more">
+    <summary class="button button-outline button-small">Edit profile</summary>
+    <div class="tp-more-panel">
+      <form class="tp-edit" action="{{ url_for('organization.update_profile', profile_id=profile.id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label><span>Name</span><input name="name" value="{{ profile.name }}" maxlength="120"></label>
+        <label><span>Public title</span><input name="role_title" value="{{ profile.role_title }}" maxlength="120"></label>
+        <button class="button button-primary button-small" type="submit">Save</button>
+      </form>
+      <div class="tp-danger">
+        <form action="{{ url_for('organization.update_profile_status', profile_id=profile.id) }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if profile.status == 'suspended' %}
+            <input type="hidden" name="action" value="reactivate">
+            <button class="button button-outline button-small" type="submit">Reactivate ID</button>
+          {% else %}
+            <input type="hidden" name="action" value="suspend">
+            <button class="button button-outline button-small tp-delete" type="submit">Suspend ID</button>
+          {% endif %}
+        </form>
+        {% if not profile.user_id %}
+          <form action="{{ url_for('organization.delete_profile', profile_id=profile.id) }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="button button-outline button-small tp-delete" type="submit">Delete profile</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </details>
+{% endmacro %}
 {% block content %}
 <section class="workspace-wrap settings-wrap">
   <p class="eyebrow">PORTAL ADMINISTRATION</p>
   <h1>Team & access</h1>
-  <p class="muted">Manage internal access and tailor what each role can do. The portal has one admin account.</p>
+  <p class="muted">Invite teammates, manage their GAMKERS team profiles and decide what each role can do. The portal has one admin account.</p>
   <div class="settings-nav">
     <a href="{{ url_for('organization.settings') }}">Workspace</a>
     <a href="{{ url_for('organization.email_settings') }}">Email delivery</a>
     <a class="active" href="{{ url_for('organization.team') }}">Team & roles</a>
   </div>
 
-  <form class="panel invite-panel" method="post">
+  <form class="panel invite-panel tp-invite" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div>
       <p class="eyebrow">ADD A TEAMMATE</p>
       <h2>Invite to the portal</h2>
-      <p class="muted">They'll receive a private invitation link that expires in 7 days.</p>
+      <p class="muted">They get a private link (valid 7 days) and a permanent GAMKERS team ID with a public profile page. Name and title are optional; they can fill them in later.</p>
     </div>
-    <div class="invite-controls">
-      <input name="email" type="email" placeholder="colleague@company.com" maxlength="255" required>
-      <select name="role" aria-label="Role for new teammate">
-        <option value="contributor">Contributor</option>
-        <option value="developer">Developer</option>
-      </select>
+    <div class="tp-invite-grid">
+      <label><span>Email</span><input name="email" type="email" placeholder="colleague@company.com" maxlength="255" required></label>
+      <label><span>Name <em>(optional)</em></span><input name="name" maxlength="120" placeholder="Full name"></label>
+      <label><span>Public title <em>(optional)</em></span><input name="role_title" maxlength="120" placeholder="e.g. Red team lead"></label>
+      <label><span>Role</span><select name="role" aria-label="Role for new teammate">{{ role_options('contributor') }}</select></label>
       <button class="button button-primary" type="submit">Send invitation ↗</button>
     </div>
   </form>
 
   <div class="section-title-row"><div><p class="eyebrow">PORTAL ACCESS</p><h2>Team members</h2></div></div>
-  <div class="team-list">
+  <div class="tp-list">
     {% for member in members %}
-      <div class="team-member">
-        <div class="avatar">{{ member.name[:1]|upper }}</div>
-        <div class="team-member-info">
-          <strong>{{ member.name }}{% if member.id == current_user.id %} <span class="muted">(you)</span>{% endif %}</strong>
-          <span>{{ member.email }}</span>
+      {% set profile = profile_by_user.get(member.id) %}
+      <div class="tp-row">
+        {{ avatar(profile, member.name) }}
+        <div class="tp-main">
+          <div class="tp-name">
+            <strong>{{ member.name }}{% if member.id == current_user.id %} <span class="muted">(you)</span>{% endif %}</strong>
+            {% if profile %}<a class="tp-id" href="{{ url_for('team_profiles.public_profile', team_id=profile.team_id) }}">{{ profile.team_id }}</a>
+              {% if profile.status == 'suspended' %}<span class="badge tp-badge-off">Suspended</span>{% endif %}{% endif %}
+          </div>
+          <p class="tp-meta">{{ member.email }}{% if profile and profile.role_title %} · {{ profile.role_title }}{% endif %}</p>
         </div>
-        {% if member.is_org_admin %}
-          <span class="badge badge-live">Admin · single account</span>
-        {% else %}
-          <form class="role-form" action="{{ url_for('organization.update_role', user_id=member.id) }}" method="post">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <select name="role" aria-label="Role for {{ member.email }}">
-              <option value="contributor" {% if member.role == 'contributor' %}selected{% endif %}>Contributor</option>
-              <option value="developer" {% if member.role == 'developer' %}selected{% endif %}>Developer</option>
-            </select>
-            <button class="button button-outline button-small" type="submit">Update role</button>
-          </form>
-        {% endif %}
+        <div class="tp-actions">
+          {% if member.is_org_admin %}
+            <span class="badge badge-live">Admin · single account</span>
+          {% else %}
+            <form class="role-form" action="{{ url_for('organization.update_role', user_id=member.id) }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="role" aria-label="Role for {{ member.email }}">
+                {% if member.role not in assignable %}<option value="{{ member.role }}" selected>{{ member.role }}</option>{% endif %}
+                {{ role_options(member.role) }}
+              </select>
+              <button class="button button-outline button-small" type="submit">Update role</button>
+            </form>
+          {% endif %}
+          {% if profile %}{{ profile_edit(profile) }}{% endif %}
+        </div>
       </div>
     {% endfor %}
   </div>
 
   {% if invitations %}
     <div class="section-title-row"><div><p class="eyebrow">AWAITING ACCEPTANCE</p><h2>Pending invitations</h2></div></div>
-    <div class="team-list">
+    <div class="tp-list">
       {% for invite in invitations %}
-        <div class="team-member">
-          <div class="avatar avatar-muted">↗</div>
-          <div class="team-member-info">
-            <strong>{{ invite.email }}</strong>
-            <span>{{ roles[invite.role] }} · expires {{ invite.expires_at.strftime('%b %d, %Y') }}</span>
+        {% set profile = profile_by_id.get(invite.profile_id) %}
+        <div class="tp-row">
+          {{ avatar(profile, invite.email) }}
+          <div class="tp-main">
+            <div class="tp-name">
+              <strong>{{ invite.email }}</strong>
+              {% if profile %}<span class="tp-id">{{ profile.team_id }}</span>{% endif %}
+              {% if invite.id in expired_invitation_ids %}<span class="badge tp-badge-off">Expired</span>{% else %}<span class="badge badge-draft">Pending</span>{% endif %}
+            </div>
+            <p class="tp-meta">{{ roles.get(invite.role, invite.role) }} · {% if invite.id in expired_invitation_ids %}expired{% else %}expires{% endif %} {{ invite.expires_at.strftime('%b %d, %Y') }}</p>
           </div>
-          <span class="badge badge-draft">Pending</span>
+          <div class="tp-actions">
+            <form action="{{ url_for('organization.resend_invitation', invitation_id=invite.id) }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="button button-outline button-small" type="submit">Resend</button>
+            </form>
+            <form action="{{ url_for('organization.revoke_invitation', invitation_id=invite.id) }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="button button-outline button-small tp-delete" type="submit">Revoke</button>
+            </form>
+            {% if profile %}{{ profile_edit(profile) }}{% endif %}
+          </div>
         </div>
       {% endfor %}
     </div>
   {% endif %}
 
-  <div class="section-title-row">
-    <div><p class="eyebrow">ACCESS CONTROL</p><h2>Role permissions</h2></div>
+  {% if loose_profiles %}
+    <div class="section-title-row"><div><p class="eyebrow">NOT LINKED TO AN ACCOUNT</p><h2>Other team profiles</h2></div></div>
+    <p class="muted">Profiles created before team profiles joined team management. Invite the same email to link one to a portal account; its team ID is kept.</p>
+    <div class="tp-list">
+      {% for profile in loose_profiles %}
+        <div class="tp-row">
+          {{ avatar(profile, profile.display_name) }}
+          <div class="tp-main">
+            <div class="tp-name">
+              <strong>{{ profile.display_name }}</strong>
+              <span class="tp-id">{{ profile.team_id }}</span>
+              {% if profile.status == 'suspended' %}<span class="badge tp-badge-off">Suspended</span>{% endif %}
+            </div>
+            <p class="tp-meta">{{ profile.email }}{% if profile.role_title %} · {{ profile.role_title }}{% endif %}</p>
+          </div>
+          <div class="tp-actions">{{ profile_edit(profile) }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="section-title-row"><div><p class="eyebrow">ACCESS CONTROL</p><h2>Roles</h2></div></div>
+  <p class="muted permissions-intro">Admin, Developer and Contributor are built in. Create your own roles, rename them, or delete them once nobody holds them.</p>
+  <div class="panel tm-roles">
+    <form class="tp-invite-grid tm-role-create" action="{{ url_for('organization.add_role') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label><span>New role name</span><input name="name" maxlength="40" placeholder="e.g. Reviewer" required></label>
+      <label><span>Start from</span>
+        <select name="copy_from">
+          <option value="">Nothing enabled</option>
+          {% for key, label in roles.items() if key != 'admin' %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="button button-primary" type="submit">Create role</button>
+    </form>
+    {% if custom_roles %}
+      <div class="tp-list tm-role-list">
+        {% for role in custom_roles %}
+          <div class="tm-role">
+            <form class="tm-role-rename" action="{{ url_for('organization.edit_role', key=role.key) }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input name="name" value="{{ role.label }}" maxlength="40" aria-label="Name for role {{ role.label }}" required>
+              <button class="button button-outline button-small" type="submit">Rename</button>
+            </form>
+            <form action="{{ url_for('organization.remove_role', key=role.key) }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="button button-outline button-small tp-delete" type="submit">Delete</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
   </div>
+
+  <div class="section-title-row"><div><p class="eyebrow">ACCESS CONTROL</p><h2>Role permissions</h2></div></div>
   <p class="muted permissions-intro">Changes take effect immediately after saving. Admin access to team and permission management is always retained to prevent lockout.</p>
   <form class="panel permissions-panel" action="{{ url_for('organization.update_permissions') }}" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="permission-table">
-      <div class="permission-row permission-heading"><strong>Capability</strong>{% for role in ['admin', 'developer', 'contributor'] %}<strong>{{ roles[role] }}</strong>{% endfor %}</div>
+    <div class="permission-table tm-cols-{{ roles|length }}">
+      <div class="permission-row permission-heading"><strong>Capability</strong>{% for role, label in roles.items() %}<strong>{{ label }}</strong>{% endfor %}</div>
       {% for permission, label in permission_rows %}
         <div class="permission-row">
           <span>{{ label }}</span>
-          {% for role in ['admin', 'developer', 'contributor'] %}
+          {% for role, role_label in roles.items() %}
             {% set saved = permission_overrides.get((role, permission)) %}
-            {% set checked = (permission in permission_defaults[role]) if saved is none else saved %}
-            <label class="permission-toggle" aria-label="{{ roles[role] }}: {{ label }}">
+            {% set checked = (permission in permission_defaults.get(role, ())) if saved is none else saved %}
+            <label class="permission-toggle" aria-label="{{ role_label }}: {{ label }}">
               <input type="checkbox" name="{{ role }}:{{ permission }}"
                 {% if checked %}checked{% endif %}
                 {% if permission in protected_permissions and role != 'admin' %}disabled{% endif %}

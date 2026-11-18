@@ -7,8 +7,9 @@ in one web application. Public account signup is disabled.
 ## Features
 
 - Create, publish, and close forms; collect and export responses.
-- Invite team members and assign admin, developer, or contributor roles.
-- Change role permissions from the administrator settings.
+- Invite team members from Team & roles; each invitation also creates their GAMKERS team profile and ID (`GMK-0001`), and members edit it at `/settings/profile`.
+- Create, rename and delete custom roles alongside the built-in admin, developer and contributor roles.
+- Change every role's permissions from the administrator settings.
 - Import contacts from CSV and send individual bulk emails.
 - Generate certificates, retain verification records, and verify certificates
   using the public verification page.

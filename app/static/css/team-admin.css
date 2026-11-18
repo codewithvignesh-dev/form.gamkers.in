@@ -1,10 +1,10 @@
 /* Admin: team profiles list (portal dark theme) */
 .workspace-heading .button { white-space: nowrap; }
 .tp-invite { display: block; }
-.tp-invite-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr auto; gap: 10px; align-items: end; margin-top: 18px; }
+.tp-invite-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; margin-top: 18px; }
 .tp-invite-grid label, .tp-edit label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #a1aaa2; }
 .tp-invite-grid label em { font-style: normal; color: #6f7a71; }
-.tp-invite-grid input, .tp-edit input { width: 100%; }
+.tp-invite-grid input, .tp-invite-grid select, .tp-edit input { width: 100%; }
 
 .tp-list { display: flex; flex-direction: column; gap: 10px; }
 .tp-row {
@@ -41,7 +41,37 @@
 .tp-delete { color: #f87171; }
 .tp-delete-confirm { background: #d03b3b; color: #fff; border: none; }
 
+/* Role matrix: the capability column plus one column per role (inline styles are blocked by CSP). */
+.permission-table { overflow-x: auto; }
+.tm-cols-3 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(3, minmax(90px, .35fr)); min-width: 530px; }
+.tm-cols-4 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(4, minmax(90px, .35fr)); min-width: 630px; }
+.tm-cols-5 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(5, minmax(90px, .35fr)); min-width: 730px; }
+.tm-cols-6 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(6, minmax(90px, .35fr)); min-width: 830px; }
+.tm-cols-7 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(7, minmax(90px, .35fr)); min-width: 930px; }
+.tm-cols-8 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(8, minmax(90px, .35fr)); min-width: 1030px; }
+.tm-cols-9 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(9, minmax(90px, .35fr)); min-width: 1130px; }
+.tm-cols-10 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(10, minmax(90px, .35fr)); min-width: 1230px; }
+.tm-cols-11 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(11, minmax(90px, .35fr)); min-width: 1330px; }
+.tm-cols-12 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(12, minmax(90px, .35fr)); min-width: 1430px; }
+.tm-cols-13 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(13, minmax(90px, .35fr)); min-width: 1530px; }
+.tm-cols-14 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(14, minmax(90px, .35fr)); min-width: 1630px; }
+.tm-cols-15 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(15, minmax(90px, .35fr)); min-width: 1730px; }
+.tm-cols-16 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(16, minmax(90px, .35fr)); min-width: 1830px; }
+.tm-cols-17 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(17, minmax(90px, .35fr)); min-width: 1930px; }
+.tm-cols-18 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(18, minmax(90px, .35fr)); min-width: 2030px; }
+.tm-cols-19 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(19, minmax(90px, .35fr)); min-width: 2130px; }
+.tm-cols-20 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(20, minmax(90px, .35fr)); min-width: 2230px; }
+.tm-cols-21 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(21, minmax(90px, .35fr)); min-width: 2330px; }
+.tm-cols-22 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(22, minmax(90px, .35fr)); min-width: 2430px; }
+.tm-cols-23 .permission-row { grid-template-columns: minmax(230px, 1fr) repeat(23, minmax(90px, .35fr)); min-width: 2530px; }
+
+.tm-roles { display: flex; flex-direction: column; gap: 16px; }
+.tm-role-create { margin-top: 0; grid-template-columns: 1.4fr 1fr auto; }
+.tm-role { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid #29332b; border-radius: 12px; background: #111511; }
+.tm-role form { display: flex; align-items: center; gap: 8px; margin: 0; }
+
 @media (max-width: 860px) {
+  .tm-role-create { grid-template-columns: 1fr; }
   .tp-invite-grid { grid-template-columns: 1fr; }
   .tp-row { grid-template-columns: 48px minmax(0, 1fr); }
   .tp-avatar { width: 48px; height: 48px; }

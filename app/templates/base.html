@@ -18,7 +18,6 @@
         <a href="{{ url_for('main.dashboard') }}" {% if request.endpoint == 'main.dashboard' %}aria-current="page"{% endif %}>Workspace</a>
         {% if current_user.has_permission('responses.view') %}<a href="{{ url_for('main.analytics') }}" {% if request.endpoint == 'main.analytics' %}aria-current="page"{% endif %}>Analytics</a>{% endif %}
         {% if current_user.has_permission('certificates.manage') %}<a href="{{ url_for('certificates.index') }}" {% if request.blueprint == 'certificates' %}aria-current="page"{% endif %}>Certificates</a>{% endif %}
-        {% if current_user.has_permission('team_profiles.manage') %}<a href="{{ url_for('team_profiles.admin_index') }}" {% if request.blueprint == 'team_profiles' %}aria-current="page"{% endif %}>Team IDs</a>{% endif %}
         {% if current_user.has_permission('bulk_mail.send') %}<a href="{{ url_for('bulk_mail.compose') }}" {% if request.blueprint == 'bulk_mail' %}aria-current="page"{% endif %}>Bulk mail</a>{% endif %}
         {% if current_user.is_org_admin %}
           <a href="{{ url_for('organization.team') }}" {% if request.endpoint == 'organization.team' %}aria-current="page"{% endif %}>Team</a>
@@ -26,6 +25,7 @@
         {% if current_user.has_permission('settings.manage') %}
           <a href="{{ url_for('organization.settings') }}" {% if request.blueprint == 'organization' and request.endpoint != 'organization.team' %}aria-current="page"{% endif %}>Settings</a>
         {% endif %}
+        <a href="{{ url_for('team_profiles.my_profile') }}" {% if request.endpoint == 'team_profiles.my_profile' %}aria-current="page"{% endif %}>My profile</a>
         <a href="{{ url_for('main.home') }}" target="_blank" rel="noopener">View site ↗</a>
         <span class="nav-identity">{{ current_user.name }}</span>
         <form class="inline-form" action="{{ url_for('auth.logout') }}" method="post">

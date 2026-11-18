@@ -1,26 +1,23 @@
-"""Team profile helpers: team IDs, single-use links, photos and social links."""
+"""Team profile helpers: team IDs, linking to accounts, photos and social links."""
 
 import re
 import secrets
-from datetime import timedelta
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from flask import current_app
+from flask import current_app, url_for
 from PIL import Image, ImageOps, UnidentifiedImageError
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.security import hash_token, new_token
-from app.team_profiles.models import TeamProfile, TeamProfileToken
+from app.team_profiles.models import STATUS_ACTIVE, STATUS_INVITED, TeamProfile
+from app.urls import absolute_app_url
 from app.utils import utcnow
 
 TEAM_ID_PREFIX = "GMK-"
 TEAM_ID_PATTERN = re.compile(r"^GMK-\d{4,6}$")
-INVITE_LIFETIME = timedelta(days=7)
-LOGIN_LIFETIME = timedelta(minutes=20)
-
 MAX_PHOTO_SIZE = 8 * 1024 * 1024
 MAX_PHOTO_PIXELS = 30_000_000
 PHOTO_SIZE = 640
@@ -79,42 +76,67 @@ def create_profile(organization_id, email, invited_by_id, name="", role_title=""
     return profile
 
 
-# ── Single-use links ────────────────────────────────────────────────────
+# ── Linking profiles to portal accounts ─────────────────────────────────
 
-def issue_token(profile, purpose):
-    """Replace any unused link of this purpose and return a fresh raw token."""
-    now = utcnow()
-    for token in profile.tokens:
-        if token.purpose == purpose and token.used_at is None:
-            token.used_at = now
-    raw = new_token()
-    lifetime = INVITE_LIFETIME if purpose == "invite" else LOGIN_LIFETIME
-    db.session.add(
-        TeamProfileToken(
-            profile=profile,
-            purpose=purpose,
-            token_hash=hash_token(raw),
-            expires_at=now + lifetime,
+def link_profile(profile, user):
+    """Attach a profile to a portal account when the member joins."""
+    profile.user_id = user.id
+    if profile.status == STATUS_INVITED:
+        profile.status = STATUS_ACTIVE
+    profile.joined_at = profile.joined_at or utcnow()
+    if not profile.name:
+        profile.name = user.name[:NAME_LIMIT]
+    db.session.commit()
+    return profile
+
+
+def profile_for_user(user):
+    """The member's own profile. Accounts that predate team profiles (such as the
+    admin) get theirs the first time they open it, reusing a same-email profile."""
+    profile = db.session.scalar(db.select(TeamProfile).where(TeamProfile.user_id == user.id))
+    if profile is not None:
+        return profile
+    profile = db.session.scalar(
+        db.select(TeamProfile).where(
+            TeamProfile.organization_id == user.organization_id,
+            func.lower(TeamProfile.email) == user.email.lower(),
+            TeamProfile.user_id.is_(None),
         )
     )
-    db.session.commit()
-    return raw
+    if profile is None:
+        profile = create_profile(
+            user.organization_id, user.email.lower(), user.id, name=user.name[:NAME_LIMIT]
+        )
+    return link_profile(profile, user)
 
 
-def find_token(raw, purposes=("invite", "login")):
-    if not raw or len(raw) > 200:
+def one_line(value, limit):
+    """Collapse whitespace; None when the result is longer than limit."""
+    value = " ".join((value or "").split())
+    return value if len(value) <= limit else None
+
+
+def is_public(profile):
+    return profile.status == STATUS_ACTIVE and bool(profile.name and profile.role_title)
+
+
+def public_profile_url(profile):
+    try:
+        return absolute_app_url("team_profiles.public_profile", team_id=profile.team_id)
+    except RuntimeError:
+        return url_for("team_profiles.public_profile", team_id=profile.team_id, _external=True)
+
+
+def photo_url(profile, external=False):
+    if not profile.photo_path:
         return None
-    token = db.session.scalar(
-        db.select(TeamProfileToken).where(TeamProfileToken.token_hash == hash_token(raw))
-    )
-    if (
-        token is None
-        or token.purpose not in purposes
-        or token.used_at is not None
-        or token.expires_at <= utcnow()
-    ):
-        return None
-    return token
+    values = {"team_id": profile.team_id, "v": profile.photo_path[:8]}
+    if external:
+        try:
+            return absolute_app_url("team_profiles.profile_photo", **values)
+        except RuntimeError:
+            return None
+    return url_for("team_profiles.profile_photo", **values)
 
 
 # ── Photos ──────────────────────────────────────────────────────────────

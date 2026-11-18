@@ -3,12 +3,13 @@
 {% block title %}My team profile · GAMKERS{% endblock %}
 {% block nav_right %}
   <span class="tm-nav-who">{{ profile.team_id }}</span>
-  <form method="post" action="{{ url_for('team_profiles.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="tm-nav-link" type="submit">Sign out</button></form>
+  <a class="tm-nav-link" href="{{ url_for('main.dashboard') }}">Workspace</a>
+  <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="tm-nav-link" type="submit">Sign out</button></form>
 {% endblock %}
 {% block content %}
 <div class="tm-portal">
   <header class="tm-portal-head">
-    <span class="tm-pill">{{ ic('users', 'ic-sm') }} GAMKERS team portal</span>
+    <span class="tm-pill">{{ ic('users', 'ic-sm') }} GAMKERS team profile</span>
     <h1>Your team profile</h1>
     <p class="tm-lead">This is what people see when you share your GAMKERS team link.</p>
   </header>

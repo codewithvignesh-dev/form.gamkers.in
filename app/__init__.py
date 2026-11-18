@@ -253,7 +253,7 @@ def create_app(test_config=None):
     @app.errorhandler(CSRFError)
     def csrf_failed(error):
         # An expired/missing CSRF token must never stop someone from signing out.
-        if request.endpoint in {"auth.logout", "team_profiles.logout"}:
+        if request.endpoint == "auth.logout":
             logout_user()
             session.clear()
             response = redirect(url_for("main.home"))

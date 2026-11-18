@@ -7,7 +7,11 @@ STATUS_SUSPENDED = "suspended"
 
 
 class TeamProfile(db.Model):
-    """A GAMKERS team contributor. Only admins create these (by invitation)."""
+    """A GAMKERS team member's public profile and team ID.
+
+    Created with the portal invitation (/settings/team) and linked to the member's
+    user account once they accept it. Profiles from before that link have no user.
+    """
 
     id = db.Column(db.Integer, primary_key=True)
     organization_id = db.Column(
@@ -21,14 +25,11 @@ class TeamProfile(db.Model):
     photo_path = db.Column(db.String(80))
     socials = db.Column(db.JSON, nullable=False, default=dict)
     status = db.Column(db.String(16), nullable=False, default=STATUS_INVITED)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), unique=True)
     invited_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"))
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
     joined_at = db.Column(db.DateTime)
-    last_login_at = db.Column(db.DateTime)
     updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
-    tokens = db.relationship(
-        "TeamProfileToken", back_populates="profile", cascade="all, delete-orphan"
-    )
     __table_args__ = (
         db.UniqueConstraint("organization_id", "email", name="uq_team_profile_email"),
         # Team IDs come from this id; never reuse one (MariaDB already doesn't).
@@ -43,17 +44,3 @@ class TeamProfile(db.Model):
     def display_name(self):
         return self.name or self.email.split("@")[0]
 
-
-class TeamProfileToken(db.Model):
-    """Single-use invite and sign-in links; only the SHA-256 of the token is stored."""
-
-    id = db.Column(db.Integer, primary_key=True)
-    profile_id = db.Column(
-        db.Integer, db.ForeignKey("team_profile.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    purpose = db.Column(db.String(12), nullable=False)  # "invite" or "login"
-    token_hash = db.Column(db.String(64), nullable=False, unique=True)
-    expires_at = db.Column(db.DateTime, nullable=False)
-    used_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
-    profile = db.relationship("TeamProfile", back_populates="tokens")
