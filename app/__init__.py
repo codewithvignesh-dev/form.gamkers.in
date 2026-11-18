@@ -100,6 +100,12 @@ def create_app(test_config=None):
         engine_options.setdefault("pool_size", 5)
         engine_options.setdefault("max_overflow", 5)
         engine_options.setdefault("pool_timeout", 20)
+        # Fail fast when the server is unreachable instead of hanging every worker.
+        connect_args = dict(engine_options.get("connect_args") or {})
+        connect_args.setdefault("connect_timeout", 5)
+        connect_args.setdefault("read_timeout", 30)
+        connect_args.setdefault("write_timeout", 30)
+        engine_options["connect_args"] = connect_args
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_options
 
     db.init_app(app)
@@ -261,6 +267,10 @@ def create_app(test_config=None):
             response.delete_cookie(app.config.get("REMEMBER_COOKIE_NAME", "remember_token"))
             return response
         return error.get_response()
+
+    from app.resilience import register_error_handlers
+
+    register_error_handlers(app)
 
     @app.errorhandler(413)
     def request_too_large(_error):

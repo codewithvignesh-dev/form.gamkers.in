@@ -17,6 +17,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label><span>Name</span><input name="name" value="{{ profile.name }}" maxlength="120"></label>
         <label><span>Public title</span><input name="role_title" value="{{ profile.role_title }}" maxlength="120"></label>
+        <label class="tp-check"><input type="checkbox" name="is_leader" {% if profile.is_leader %}checked{% endif %}><span>Show as a leader on the landing page</span></label>
         <button class="button button-primary button-small" type="submit">Save</button>
       </form>
       <div class="tp-danger">

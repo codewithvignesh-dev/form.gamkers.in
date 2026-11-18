@@ -1,0 +1,27 @@
+<!doctype html>
+{# Error pages must render with no database access, so this does not extend base.html (it reads current_user). #}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080a08">
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+  <title>{% block title %}GAMKERS{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="{{ url_for('main.home') }}"><img src="{{ url_for('static', filename='img/logo.png') }}" alt="" class="brand-logo-img"> GAMKERS</a>
+  </header>
+  <main>
+    <section class="submitted-wrap panel">
+      {% block body %}{% endblock %}
+      <a class="button button-outline" href="{{ url_for('main.home') }}">Go to the GAMKERS home page</a>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <span>© {{ current_year }} GAMKERS</span>
+  </footer>
+</body>
+</html>

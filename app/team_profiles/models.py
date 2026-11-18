@@ -25,6 +25,8 @@ class TeamProfile(db.Model):
     photo_path = db.Column(db.String(80))
     socials = db.Column(db.JSON, nullable=False, default=dict)
     status = db.Column(db.String(16), nullable=False, default=STATUS_INVITED)
+    # Shown as a leader card (rather than in the contributors strip) on the landing page.
+    is_leader = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), unique=True)
     invited_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"))
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)

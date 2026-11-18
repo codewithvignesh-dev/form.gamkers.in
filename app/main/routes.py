@@ -9,6 +9,8 @@ from app.auth.models import User
 from app.extensions import db
 from app.main.analytics import build_analytics, parse_range
 from app.permissions import requires_permission
+from app.resilience import DATABASE_ERRORS, database_down, mark_database_down
+from app.team_profiles.landing import landing_team
 from app.forms.models import Form, Submission
 from app.forms.public_events import feedback_summary, registration_count
 
@@ -24,9 +26,8 @@ main = Blueprint("main", __name__)
 #     return redirect(url_for("auth.login", next=url_for("main.dashboard")))
 
 
-@main.get("/")
-def home():
-    # The public site is shown to everyone; admins reach the workspace via /admin.
+def _load_events():
+    """Public events for the landing page: (upcoming, completed-with-feedback)."""
     # Public events = published, top-level (non-feedback) forms. Open ones are
     # upcoming/registerable; closed ones are shown as past events.
     upcoming_events = (
@@ -52,6 +53,29 @@ def home():
         .limit(6)
         .all()
     )
+    # Completed events with anonymous rating totals and consented quotes.
+    completed = []
+    for event in past_events:
+        summary = feedback_summary(event, quote_limit=3)
+        completed.append(
+            {"event": event, "feedback": summary, "registrations": registration_count(event)}
+        )
+    return upcoming_events, past_events, completed
+
+
+@main.get("/")
+def home():
+    # The public site is shown to everyone; it must stay up when the database is
+    # not: events and testimonials then render empty and the team uses its
+    # built-in list, instead of the visitor getting an error.
+    upcoming_events, past_events, completed = [], [], []
+    if not database_down():
+        try:
+            upcoming_events, past_events, completed = _load_events()
+        except DATABASE_ERRORS as error:
+            mark_database_down(error)
+            upcoming_events, past_events, completed = [], [], []
+    testimonials = [quote for item in completed for quote in item["feedback"]["quotes"]]
     # "Next event" ticket: the event an admin chose to feature, otherwise the
     # soonest event that has not started yet. Event times are stored naive in
     # the event's own timezone.
@@ -68,15 +92,6 @@ def home():
         if starts > now_utc:
             next_event, next_event_iso = event, starts.isoformat()
             break
-    # Completed events with anonymous rating totals and consented quotes.
-    completed = []
-    testimonials = []
-    for event in past_events:
-        summary = feedback_summary(event, quote_limit=3)
-        completed.append(
-            {"event": event, "feedback": summary, "registrations": registration_count(event)}
-        )
-        testimonials.extend(summary["quotes"])
     return render_template(
         "landing.html",
         upcoming_events=upcoming_events,
@@ -85,6 +100,7 @@ def home():
         testimonials=testimonials[:6],
         next_event=next_event,
         next_event_iso=next_event_iso,
+        team=landing_team(),
     )
 
 

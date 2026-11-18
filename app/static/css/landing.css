@@ -678,3 +678,14 @@ html { scroll-snap-type: y proximity; }
 .c-nav-cta { gap: 12px; align-items: center; }
 .c-nav-admin { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.16); font-size: 13px; font-weight: 600; color: #e8efe9; }
 .c-nav-admin:hover { border-color: #4ade80; color: #4ade80; }
+
+/* Team cards and names link to each member's public team page when they have one. */
+a.l-leader, a.l-name { color: inherit; text-decoration: none; }
+a.l-leader:hover, a.l-leader:focus-visible, a.l-name:hover, a.l-name:focus-visible { border-color: rgba(74, 222, 128, 0.55); }
+a.l-name:hover, a.l-name:focus-visible { background: rgba(255, 255, 255, 0.08); }
+
+/* Uploaded team photos replace the initials; people without one keep the initials. */
+.l-avatar span { overflow: hidden; }
+.l-avatar img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.l-name i { overflow: hidden; }
+.l-name i img { display: block; width: 100%; height: 100%; object-fit: cover; }

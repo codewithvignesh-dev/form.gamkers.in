@@ -371,6 +371,7 @@ def update_profile(profile_id):
         flash("Keep the name and public title under 120 characters.", "error")
     else:
         profile.name, profile.role_title = name, role_title
+        profile.is_leader = request.form.get("is_leader") == "on"
         db.session.commit()
         flash(f"{profile.team_id} updated.", "success")
     return redirect(url_for("organization.team"))

@@ -1,3 +1,4 @@
+from flask import abort, g
 from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -16,7 +17,18 @@ convention = {
 
 db = SQLAlchemy(metadata=MetaData(naming_convention=convention))
 migrate = Migrate()
-login_manager = LoginManager()
+
+
+class ResilientLoginManager(LoginManager):
+    def unauthorized(self):
+        # A signed-in member whose account could not be loaded because the database
+        # is down must not be bounced to the sign-in page: tell them to retry.
+        if g.get("db_unavailable"):
+            abort(503)
+        return super().unauthorized()
+
+
+login_manager = ResilientLoginManager()
 login_manager.login_view = "auth.login"
 login_manager.login_message_category = "info"
 csrf = CSRFProtect()

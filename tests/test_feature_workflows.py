@@ -423,23 +423,19 @@ def test_closing_registration_creates_feedback_form_and_generates_permanent_cert
     assert CertificateRecord.query.count() == 1
 
 
-def test_admin_entry_point_requires_sign_in_and_opens_workspace(client):
-    response = client.get("/admin")
-    assert response.status_code == 302
-    location = urlparse(response.headers["Location"])
-    assert location.path == "/login"
-    assert parse_qs(location.query) == {"next": ["/dashboard"]}
-
-    login_page = client.get("/login")
-    assert login_page.status_code == 200 and b'type="password"' in login_page.data
-    # /login is the only sign-in page; the old /admin/login URL no longer exists.
+def test_login_is_the_only_entry_point_and_admin_urls_are_gone(client):
+    # /admin and /admin/login were removed: /login is the only sign-in page.
+    assert client.get("/admin").status_code == 404
+    assert client.get("/admin/").status_code == 404
     assert client.get("/admin/login").status_code == 404
     assert client.post("/admin/login", data={}).status_code == 404
 
+    login_page = client.get("/login")
+    assert login_page.status_code == 200 and b'type="password"' in login_page.data
+    assert client.get("/dashboard").status_code == 302  # signed out: sent to /login
+
     _register(client)  # creates the admin and signs in
-    response = client.get("/admin")
-    assert response.status_code == 302
-    assert urlparse(response.headers["Location"]).path == "/dashboard"
+    assert client.get("/login").status_code == 302  # already signed in: goes to the workspace
     # Signed-in admins can still view the public site.
     assert client.get("/").status_code == 200
 

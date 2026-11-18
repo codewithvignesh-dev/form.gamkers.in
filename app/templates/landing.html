@@ -438,7 +438,6 @@
 {% endif %}
 
 {# ══════════════ 10 · TEAM (purple) ══════════════ #}
-{% set contributors = ['Narayanan','Kavin Karthikeyan','Vishal M','D. S. Kamali','Jeyaratnam Jenosan','Abarna S','M. Akash','Balasaktheeswar R','Sanjeev Kumar','Raj Kisan Sathiyan','Praveen','Aadhish','Jaiganesh','Nidhish Kumaran','Yuvaraj','Dharshan','Thiruselvam K','Sudarsan Kumar','Vinoth','Adwaith','Santhosh','Santhosh S','Sachidanand S','Vignesh M','Sneharini S','Abhilash H','Mahendiran M','Harish Balaji','Badmanaban','Abdul Aleem','Ashwanth','Vishal Muthuvel','Jayanth'] %}
 <section id="team" class="l-sec full t-purple">
   <div class="l-wrap">
     <div class="l-head center l-reveal">
@@ -447,21 +446,24 @@
       <p class="l-lead">Cybersecurity enthusiasts, developers, educators and contributors making cybersecurity learning practical, accessible and community-driven.</p>
     </div>
     <div class="l-leaders l-stagger l-swipe">
-      {% for l in [['AM','Akash M.','Cybersecurity Tech Lead','shield'],['BJ','Balaji','VAPT Lead','target'],['VW','Vigneshwaran','Senior Developer','code']] %}
-      <div class="l-card l-leader"><div class="l-avatar"><span>{{ l[0] }}</span></div><div><h4>{{ l[1] }}</h4><span class="role">{{ ic(l[3]) }} {{ l[2] }}</span></div></div>
+      {% for l in team.leaders %}
+      {% if l.team_id %}<a class="l-card l-leader" href="{{ url_for('team_profiles.public_profile', team_id=l.team_id) }}">{% else %}<div class="l-card l-leader">{% endif %}<div class="l-avatar"><span>{% if l.photo %}<img src="{{ l.photo }}" alt="Photo of {{ l.name }}" width="104" height="104" loading="lazy" decoding="async">{% else %}{{ l.initials }}{% endif %}</span></div><div><h4>{{ l.name }}</h4><span class="role">{{ ic(l.icon) }} {{ l.role }}</span></div>{% if l.team_id %}</a>{% else %}</div>{% endif %}
       {% endfor %}
     </div>
+    {% if team.contributors %}
     <div class="l-contrib-top l-reveal">
       <div><h3>Our contributors</h3><p>Learners, builders and researchers contributing through content, research, events and community initiatives.</p></div>
-      <span class="l-count">{{ contributors|length }}</span>
+      <span class="l-count">{{ team.contributors|length }}</span>
     </div>
     <div class="l-names l-reveal">
-      {% for row in [contributors[:16], contributors[16:]] %}
-      <div class="l-marquee {{ 'rev' if loop.last }}">
-        {% for _ in range(2) %}{% for n in row %}<span class="l-name"><i>{{ n[0] }}</i>{{ n }}</span>{% endfor %}{% endfor %}
+      {% set half = team.contributors|length // 2 %}
+      {% for row in [team.contributors[:half], team.contributors[half:]] if row %}
+      <div class="l-marquee {{ 'rev' if loop.last and not loop.first }}">
+        {% for _ in range(2) %}{% for n in row %}{% if n.team_id %}<a class="l-name" href="{{ url_for('team_profiles.public_profile', team_id=n.team_id) }}"><i>{% if n.photo %}<img src="{{ n.photo }}" alt="" width="26" height="26" loading="lazy" decoding="async">{% else %}{{ n.name[0] }}{% endif %}</i>{{ n.name }}</a>{% else %}<span class="l-name"><i>{% if n.photo %}<img src="{{ n.photo }}" alt="" width="26" height="26" loading="lazy" decoding="async">{% else %}{{ n.name[0] }}{% endif %}</i>{{ n.name }}</span>{% endif %}{% endfor %}{% endfor %}
       </div>
       {% endfor %}
     </div>
+    {% endif %}
     <div class="l-collab l-reveal">
       <span class="l-chip">{{ ic('search') }} Research &amp; Exploration</span>
       <span class="l-chip">{{ ic('book') }} Content &amp; Education</span>

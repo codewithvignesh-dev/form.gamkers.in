@@ -9,6 +9,8 @@ in one web application. Public account signup is disabled.
 - Create, publish, and close forms; collect and export responses.
 - Invite team members from Team & roles; each invitation also creates their GAMKERS team profile and ID (`GMK-0001`), and members edit it at `/settings/profile`.
 - Create, rename and delete custom roles alongside the built-in admin, developer and contributor roles.
+- The landing page team section is built from active team profiles (tick "Show as a leader" on a profile for the leader cards). The contributors strip lists only active members with the Contributor portal role and is omitted when there are none; leader cards fall back to the built-in list.
+- The public site stays up when MySQL is unreachable: the landing page renders without events, other data pages answer a friendly 503 with `Retry-After`, and unexpected errors show a plain 500 page. Run `flask db upgrade` after updating (adds `team_profile.is_leader`).
 - Change every role's permissions from the administrator settings.
 - Import contacts from CSV and send individual bulk emails.
 - Generate certificates, retain verification records, and verify certificates

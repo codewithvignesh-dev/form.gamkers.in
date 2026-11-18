@@ -333,3 +333,23 @@ def test_old_id_links_redirect_to_team_pages(client):
     assert client.get("/id/GMK-0007").status_code == 301
     assert client.get("/id/GMK-0007/photo?v=ab").headers["Location"].endswith("/team/GMK-0007/photo?v=ab")
     assert client.get("/id?team_id=GMK-0007").headers["Location"].endswith("/team?team_id=GMK-0007")
+
+
+def test_admin_marks_a_member_as_a_landing_page_leader(client, outbox):
+    _sign_in_admin(client)
+    profile = _invite_and_join(client, outbox)
+    client.post("/settings/profile", data={"name": "Dev Kumar", "role_title": "VAPT Lead"})
+    assert b'class="l-card l-leader" href="/team/GMK-0001"' not in client.get("/").data
+
+    _sign_back_in_as_admin(client)
+    client.post(f"/settings/team/profiles/{profile.id}/update",
+                data={"name": "Dev Kumar", "role_title": "VAPT Lead", "is_leader": "on"})
+    db.session.refresh(profile)
+    assert profile.is_leader is True
+    page = client.get("/").get_data(as_text=True)
+    assert 'class="l-card l-leader" href="/team/GMK-0001"' in page and "VAPT Lead" in page
+
+    client.post(f"/settings/team/profiles/{profile.id}/update",
+                data={"name": "Dev Kumar", "role_title": "VAPT Lead"})
+    db.session.refresh(profile)
+    assert profile.is_leader is False

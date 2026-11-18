@@ -5,6 +5,8 @@
 .tp-invite-grid label, .tp-edit label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #a1aaa2; }
 .tp-invite-grid label em { font-style: normal; color: #6f7a71; }
 .tp-invite-grid input, .tp-invite-grid select, .tp-edit input { width: 100%; }
+.tp-edit .tp-check { flex-direction: row; align-items: center; gap: 8px; }
+.tp-edit .tp-check input { width: auto; }
 
 .tp-list { display: flex; flex-direction: column; gap: 10px; }
 .tp-row {

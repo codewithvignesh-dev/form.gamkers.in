@@ -60,25 +60,28 @@ def upgrade():
     if not _has_index("role", "ix_role_organization_id"):
         op.create_index("ix_role_organization_id", "role", ["organization_id"])
 
-    if not _has_column("team_profile", "user_id"):
-        op.add_column("team_profile", sa.Column("user_id", sa.Integer(), nullable=True))
-    if not _has_fk("team_profile", "fk_team_profile_user_id_user"):
-        op.create_foreign_key(
-            "fk_team_profile_user_id_user", "team_profile", "user",
-            ["user_id"], ["id"], ondelete="SET NULL",
-        )
-    if not _has_unique("team_profile", "uq_team_profile_user_id"):
-        op.create_unique_constraint("uq_team_profile_user_id", "team_profile", ["user_id"])
-    if _has_column("team_profile", "last_login_at"):
-        op.drop_column("team_profile", "last_login_at")
+    # batch_alter_table runs plain ALTERs on MySQL and copy-and-move on SQLite, which
+    # cannot ALTER constraints. Each step is skipped when a failed run already did it.
+    with op.batch_alter_table("team_profile") as batch_op:
+        if not _has_column("team_profile", "user_id"):
+            batch_op.add_column(sa.Column("user_id", sa.Integer(), nullable=True))
+        if not _has_fk("team_profile", "fk_team_profile_user_id_user"):
+            batch_op.create_foreign_key(
+                "fk_team_profile_user_id_user", "user", ["user_id"], ["id"], ondelete="SET NULL"
+            )
+        if not _has_unique("team_profile", "uq_team_profile_user_id"):
+            batch_op.create_unique_constraint("uq_team_profile_user_id", ["user_id"])
+        if _has_column("team_profile", "last_login_at"):
+            batch_op.drop_column("last_login_at")
 
-    if not _has_column("invitation", "profile_id"):
-        op.add_column("invitation", sa.Column("profile_id", sa.Integer(), nullable=True))
-    if not _has_fk("invitation", "fk_invitation_profile_id_team_profile"):
-        op.create_foreign_key(
-            "fk_invitation_profile_id_team_profile", "invitation", "team_profile",
-            ["profile_id"], ["id"], ondelete="SET NULL",
-        )
+    with op.batch_alter_table("invitation") as batch_op:
+        if not _has_column("invitation", "profile_id"):
+            batch_op.add_column(sa.Column("profile_id", sa.Integer(), nullable=True))
+        if not _has_fk("invitation", "fk_invitation_profile_id_team_profile"):
+            batch_op.create_foreign_key(
+                "fk_invitation_profile_id_team_profile", "team_profile", ["profile_id"], ["id"],
+                ondelete="SET NULL",
+            )
 
     # Preserve IDs for existing members. The unique email constraint on
     # (organization_id, email) prevents multiple profiles mapping to one account.
@@ -117,19 +120,21 @@ def downgrade():
         )
         op.create_index("ix_team_profile_token_profile_id", "team_profile_token", ["profile_id"])
 
-    if _has_fk("invitation", "fk_invitation_profile_id_team_profile"):
-        op.drop_constraint("fk_invitation_profile_id_team_profile", "invitation", type_="foreignkey")
-    if _has_column("invitation", "profile_id"):
-        op.drop_column("invitation", "profile_id")
+    with op.batch_alter_table("invitation") as batch_op:
+        if _has_fk("invitation", "fk_invitation_profile_id_team_profile"):
+            batch_op.drop_constraint("fk_invitation_profile_id_team_profile", type_="foreignkey")
+        if _has_column("invitation", "profile_id"):
+            batch_op.drop_column("profile_id")
 
-    if _has_unique("team_profile", "uq_team_profile_user_id"):
-        op.drop_constraint("uq_team_profile_user_id", "team_profile", type_="unique")
-    if _has_fk("team_profile", "fk_team_profile_user_id_user"):
-        op.drop_constraint("fk_team_profile_user_id_user", "team_profile", type_="foreignkey")
-    if _has_column("team_profile", "user_id"):
-        op.drop_column("team_profile", "user_id")
-    if not _has_column("team_profile", "last_login_at"):
-        op.add_column("team_profile", sa.Column("last_login_at", sa.DateTime(), nullable=True))
+    with op.batch_alter_table("team_profile") as batch_op:
+        if _has_unique("team_profile", "uq_team_profile_user_id"):
+            batch_op.drop_constraint("uq_team_profile_user_id", type_="unique")
+        if _has_fk("team_profile", "fk_team_profile_user_id_user"):
+            batch_op.drop_constraint("fk_team_profile_user_id_user", type_="foreignkey")
+        if _has_column("team_profile", "user_id"):
+            batch_op.drop_column("user_id")
+        if not _has_column("team_profile", "last_login_at"):
+            batch_op.add_column(sa.Column("last_login_at", sa.DateTime(), nullable=True))
 
     bind = op.get_bind()
     bind.execute(sa.text("UPDATE user SET `role` = 'contributor' WHERE `role` LIKE 'custom-%'"))
